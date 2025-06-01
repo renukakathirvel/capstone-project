@@ -11,8 +11,14 @@ import ProfilePage from './pages/ProfilePage';
 import PlacesPage from './pages/placesPage';
 import PlacesFormPage from './pages/PlacesFormPage';
 
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 axios.defaults.baseURL = 'http://127.0.0.1:4000';
-axios.defaults.withCredentials = true;
 
 function App() {
    return (

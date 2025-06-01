@@ -18,11 +18,10 @@ const jwtSecret = 'EuseDRO3AsYb5NlUWZisHQd6DC4fC35O6';
 
 
 app.use(express.json());
-app.use(cookieParser());
+
 app.use('/uploads', express.static(__dirname + '/uploads'));
 app.use(cors({
-    credentials: true,
-    origin: 'http://localhost:5173',
+  origin: 'http://localhost:5173',
 }));
 
 mongoose
@@ -48,40 +47,50 @@ app.post('/register', async (req,res) => {
     
 });
 
-app.post ('/login', async (req,res) => {
-    const {email,password} = req.body;
-    const userDoc = await User.findOne({email});
-    if (userDoc) {
-        const passOk = bcrypt.compareSync(password, userDoc.password);
-        if (passOk) {
-            jwt.sign({
-                email:userDoc.email,
-                id:userDoc._id 
-            }, jwtSecret, {}, (err,token) => {
-              if (err) throw err;
-              res.cookie('token', token).json(userDoc);
-                        });
-        } else {
-            res.status(422).json('pass not ok');
-        }
-       } else {
-        res.json('not found');
-    }
-    });
-
-    app.get('/profile', (req,res) => {
-    //     mongoose.connect(process.env.MONGO_URL);
-        const {token} = req.cookies;
-        if (token) {
-          jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+app.post('/login', async (req,res) => {
+  const {email,password} = req.body;
+  const userDoc = await User.findOne({email});
+  if (userDoc) {
+      const passOk = bcrypt.compareSync(password, userDoc.password);
+      if (passOk) {
+          jwt.sign({
+              email:userDoc.email,
+              id:userDoc._id 
+          }, jwtSecret, {}, (err,token) => {
             if (err) throw err;
-            const {name,email,_id} = await User.findById(userData.id);
-            res.json({name,email,_id});
+            // Return token in response body instead of just cookie
+            res.json({
+              user: userDoc,
+              token: token
+            });
           });
-        } else {
-          res.json(null);
-        }
-      });
+      } else {
+          res.status(422).json('password is incorrect');
+      }
+     } else {
+      res.json('user not found');
+  }
+});
+
+app.get('/profile', (req, res) => {
+  // Instead of using cookies, get token from Authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json(null);
+  }
+  
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  
+  if (token) {
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+      if (err) return res.status(401).json(null);
+      const {name, email, _id} = await User.findById(userData.id);
+      res.json({name, email, _id});
+    });
+  } else {
+    res.json(null);
+  }
+});
 
 app.post('/logout', (req,res) => {
     res.cookie('token', '').json(true);
@@ -113,21 +122,31 @@ app.post('/upload', photosMiddleware.array('photos', 100), (req,res) => {
 });
 
 app.post('/places', (req, res) => {
-  const {token} = req.cookies;
+  // Get token from Authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({error: 'Unauthorized'});
+  }
+  
+  const token = authHeader.substring(7);
+  
   const{
-    title,address,addedPhotos,description,
-    perks,extraInfo,checkIn,checkOut,maxGuests
+    title, address, addedPhotos, description,
+    perks, extraInfo, checkIn, checkOut, maxGuests
   } = req.body;
+  
   jwt.verify(token, jwtSecret, {}, async (err, userData) => {
-    if (err) throw err;
-   const placeDoc = await Place.create({
-      owner:userData.id,
-      title,address,addedPhotos,description,
-    perks,extraInfo,checkIn,checkOut,maxGuests,
-});
-res.json(placeDoc);
+    if (err) return res.status(401).json({error: 'Invalid token'});
+    
+    const placeDoc = await Place.create({
+      owner: userData.id,
+      title, address, addedPhotos, description,
+      perks, extraInfo, checkIn, checkOut, maxGuests,
+    });
+    
+    res.json(placeDoc);
   });
- });
+});
 
  app.listen(4000);
-console.log('server started on port 4000');
+console.log('server started on port 4000');logout

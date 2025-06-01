@@ -3,6 +3,7 @@ import Perks from "../Perks";
 import { useState } from "react";
 import axios from "axios";
 import AccountNav from "../AccountNav";
+import { Navigate } from "react-router-dom";
 
 export default function PlacesFormPage() {
     const [title,setTiltle] = useState('');
@@ -36,14 +37,19 @@ export default function PlacesFormPage() {
     
     async function addNewPlace(ev) {
         ev.preventDefault();
-      await axios.post('/places', {
-        title, address, addedPhotos,
-        description, perks, extraInfo,
-        checkIn, checkOut, maxGuests
-    });
-    setRedirect(true);
- }
-
+        const token = localStorage.getItem('token');
+        
+        await axios.post('/places', {
+          title, address, addedPhotos,
+          description, perks, extraInfo,
+          checkIn, checkOut, maxGuests
+        }, {
+          headers: {
+                Authorization: `Bearer ${token}`,
+          }
+        });
+        setRedirect(true);
+      }
  if (redirect) {
     return <Navigate to={'/account/places'} />
  }
@@ -92,4 +98,3 @@ export default function PlacesFormPage() {
     </div>
     );
 }
-

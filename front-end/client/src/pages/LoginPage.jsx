@@ -11,14 +11,18 @@ export default function LoginPage() {
   async function handleLoginSubmit(ev) {
     ev.preventDefault();
     try {
-     const {data} = await axios.post('/login', {email, password});
-     setUser(data);
+      const response = await axios.post('/login', {email, password});
+      // Extract token and user from response
+      const { token, user } = response.data;
+      // Store token in localStorage
+      localStorage.setItem('token', token);
+      // Set user in context
+      setUser(user);
       alert('login successful');
       setRedirect(true);
     } catch (e) {
       alert('login failed');
     }
-    
   }
 
   if (redirect) {
