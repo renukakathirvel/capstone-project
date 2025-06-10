@@ -1,11 +1,12 @@
 import PhotosUploader from "../PhotosUploader";
 import Perks from "../Perks";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import AccountNav from "../AccountNav";
-import { Navigate } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 
 export default function PlacesFormPage() {
+    const {id} = useParams();
     const [title,setTiltle] = useState('');
     const [address,setAddress] = useState('');
     const [addedPhotos,setAddedPhotos] = useState([]);
@@ -16,6 +17,23 @@ export default function PlacesFormPage() {
     const [checkOut,setCheckOut] = useState('');
     const [maxGuests,setMaxGuests] = useState(1);
     const [redirect,setRedirect] = useState(false);
+    useEffect(() => {
+       if (!id) {
+        return;
+       }       
+       axios.get('/places/'+id).then(response => {
+        const {data} = response;
+        setTiltle(data.title);
+        setAddress(data.address);
+        setAddedPhotos(data.addedPhotos);
+        setDescription(data.description);
+        setPerks(data.perks);
+        setExtraInfo(data.extrainfo);
+        setCheckIn(data.checkIn);
+        setCheckOut(data.checkOut);
+        setMaxGuests(data.maxGuests);
+       }); 
+    }, [id]);
     function inputHeader(text) {
         return ( 
             <h2 className="text-2xl mt-4">{text}</h2>
@@ -35,20 +53,38 @@ export default function PlacesFormPage() {
         );
     }
     
-    async function addNewPlace(ev) {
+    async function savePlace(ev) {
         ev.preventDefault();
-        const token = localStorage.getItem('token');
-        
-        await axios.post('/places', {
-          title, address, addedPhotos,
+        const placeData = {
+            title, address, addedPhotos,
           description, perks, extraInfo,
           checkIn, checkOut, maxGuests
+        };
+        if (id) {
+            //update
+            const token = localStorage.getItem('token');
+        
+        await axios.put('/places', {
+            id, ...placeData             
         }, {
           headers: {
                 Authorization: `Bearer ${token}`,
           }
         });
         setRedirect(true);
+        }else {
+            //new place
+            const token = localStorage.getItem('token');
+        
+        await axios.post('/places', placeData, {
+          headers: {
+                Authorization: `Bearer ${token}`,
+          }
+        });
+        setRedirect(true);
+        }
+    
+        
       }
  if (redirect) {
     return <Navigate to={'/account/places'} />
@@ -56,7 +92,7 @@ export default function PlacesFormPage() {
     return (
         <div>
             <AccountNav />
-        <form onSubmit={addNewPlace}>
+        <form onSubmit={savePlace}>
             {preInput('Title','title for your place, should be short and catchy as in advertisement')}
             <input type="text" value={title} onChange={ev => setTiltle(ev.target.value) } placeholder="title, for example: My lovely apt" />
             {preInput('Address','address to the place')}
