@@ -1,56 +1,40 @@
-import React from "react";
-// import Banner from "../../components/Banner/Banner";
-import Card from "./CardPage";
-import "../Card.css";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import {Link} from "react-router-dom";
 
+export default function IndexPage() {
+  const [places, setPlaces] = useState([]);
 
-const Index = () => {
+  useEffect(() => {
+    axios.get('/places')
+      .then(response => {
+        setPlaces(response.data);  // ✅ no repetition
+      })
+      .catch(err => {
+        console.error(err);
+      });
+  }, []);
+
   return (
-    <div>
-    <div className="home__section">
-      <Card 
-      title="Kodaikanal, India"
-      src="https://a0.muscache.com/im/pictures/06239b01-7b4d-4003-ba77-44d6983795da.jpg?im_w=720"
-      km="74 kilometers away"
-      price="₹19,971 for 5 nights"
-      />
-      <Card 
-      title="Rajakkad, India"
-      src="https://a0.muscache.com/im/pictures/hosting/Hosting-1315303299475673812/original/080d0edd-3076-4fc9-b5e5-7f499e4125a1.jpeg?im_w=720"
-      km="112 kilometers away"
-      price="₹28,244 for 5 nights"
-      />
-      <Card 
-      title="Kodaikanal, India"
-      src="https://a0.muscache.com/im/pictures/7ef7f41b-62e2-43c1-b68f-8cd23e954167.jpg?im_w=720"
-      km="77 kilometers away"
-      price="₹143,218 for 5 nights"
-      />
-    </div>
-
-    <div className="home__section">
-      <Card 
-      title="Nedumkandam, India"
-      src="https://a0.muscache.com/im/pictures/6575abcf-874b-4e19-948f-9f30da55d115.jpg?im_w=720"
-      km="110 kilometers away"
-      price="₹7,412 for 5 nights"
-      />
-      <Card 
-      title="Township, India"
-      src="https://a0.muscache.com/im/pictures/b90dd38f-f1e3-49f3-92f5-834bc0823d53.jpg?im_w=720"
-      km="140 kilometers away"
-      price="₹8,533 for 5 nights"
-      />
-      <Card 
-      title="Vilpatti, India"
-      src="https://a0.muscache.com/im/pictures/miso/Hosting-1284579835956333641/original/5c454c30-acb1-48e1-933c-59180cade378.jpeg?im_w=720"
-      km="79 kilometers away"
-      price="₹46,104 for 5 nights"
-      />
-
-    </div>
+    <div className="mt-8 grid gap-x-6 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {places.length > 0 && places.map(place => (
+        <Link to={'/place/'+place._id}>
+          <div className="bg-gray-500 mb-2 rounded-2xl flex">
+            {place.photos?.[0] && (
+              <img
+                className="rounded-2xl object-cover aspect-square"
+                src={'http://localhost:4000/uploads/' + place.photos?.[0]}
+                alt=""
+              />
+            )}
+          </div>
+          <h2 className="font-bold">{place.address}</h2>
+           <h3 className="text-sm text-gray-500">{place.title}</h3>
+          <div className="mt-1"> 
+            <span className="font-bold">${place.price} </span> per night
+          </div>
+        </Link>
+      ))}
     </div>
   );
-};
-
-export default Index;
+}

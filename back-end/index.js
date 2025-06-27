@@ -5,38 +5,54 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
 const Place = require('./models/Place');
+const Booking = require('./models/Booking');
 const cookieParser = require('cookie-parser');
 const imageDownloader = require('image-downloader');
 const multer = require('multer');
 const fs = require('fs');
-const path = require('path'); // add to top if not already
-
-
+const path = require('path');
+const helmet = require('helmet');
 require('dotenv').config();
+
 const app = express();
-
 const bcryptSalt = bcrypt.genSaltSync(10);
-const jwtSecret = 'EuseDRO3AsYb5NlUWZisHQd6DC4fC35O6';
+const jwtSecret = process.env.JWT_SECRET || 'default_secret';
 
+// Middleware
 app.use(express.json());
-app.use('/uploads', express.static(__dirname + '/uploads'));
+app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+app.use(helmet());
 app.use(cors({
   origin: 'http://localhost:5173',
+  credentials: true,
 }));
 
-mongoose
-  .connect(process.env.MONGO_URL)
+// Database Connection
+mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error(err));
+  .catch((err) => console.error("MongoDB connection failed:", err));
 
-// 🔐 Token verification middleware
+// Utility: Get user data from cookie token
+function getUserDataFromReq(req) {
+  return new Promise((resolve, reject) => {
+    const token = req.cookies.token;
+    if (!token) return reject(new Error('No token found'));
+
+    jwt.verify(token, jwtSecret, {}, (err, userData) => {
+      if (err) reject(err);
+      else resolve(userData);
+    });
+  });
+}
+
+// Middleware: Verify token from cookie
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-
-  const token = authHeader.split(' ')[1]; // remove "Bearer "
+  const token = authHeader.split(' ')[1];
   jwt.verify(token, jwtSecret, {}, (err, userData) => {
     if (err) return res.status(403).json({ error: 'Invalid token' });
     req.user = userData;
@@ -44,12 +60,12 @@ function verifyToken(req, res, next) {
   });
 }
 
-// ✅ Routes
-app.get('/test', (req, res) => {
-  res.json('test ok');
+// Routes
+app.get('/api/v1/test', (req, res) => {
+  res.json('Server is working ✅');
 });
 
-app.post('/register', async (req, res) => {
+app.post('/api/v1/register', async (req, res) => {
   const { name, email, password } = req.body;
   try {
     const userDoc = await User.create({
@@ -59,152 +75,153 @@ app.post('/register', async (req, res) => {
     });
     res.json(userDoc);
   } catch (e) {
-    res.status(422).json(e);
+    res.status(422).json({ error: 'Registration failed' });
   }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/api/v1/login', async (req, res) => {
   const { email, password } = req.body;
-  const userDoc = await User.findOne({ email });
+  try {
+    const userDoc = await User.findOne({ email });
+    if (!userDoc) return res.status(404).json({ error: 'User not found' });
 
-  if (userDoc) {
     const passOk = bcrypt.compareSync(password, userDoc.password);
-    if (passOk) {
-      jwt.sign(
-        { email: userDoc.email, id: userDoc._id },
-        jwtSecret,
-        {},
-        (err, token) => {
-          if (err) throw err;
-          res.json({ user: userDoc, token });
-        }
-      );
-    } else {
-      res.status(422).json('Password is incorrect');
-    }
-  } else {
-    res.status(404).json('User not found');
+    if (!passOk) return res.status(422).json({ error: 'Incorrect password' });
+
+    jwt.sign(
+      { email: userDoc.email, id: userDoc._id },
+      jwtSecret,
+      {},
+      (err, token) => {
+        if (err) throw err;
+        res.json({ user: userDoc, token });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
-app.get('/profile', verifyToken, async (req, res) => {
+app.get('/api/v1/profile', verifyToken, async (req, res) => {
   const userDoc = await User.findById(req.user.id);
   if (!userDoc) return res.status(404).json(null);
   const { name, email, _id } = userDoc;
   res.json({ name, email, _id });
 });
 
-app.post('/logout', (req, res) => {
+app.post('/api/v1/logout', (req, res) => {
   res.cookie('token', '').json(true);
 });
 
-app.post('/upload-by-link', async (req, res) => {
+app.post('/api/v1/upload-by-link', async (req, res) => {
   const { link } = req.body;
   const newName = 'photo' + Date.now() + '.jpg';
-  await imageDownloader.image({
-    url: link,
-    dest: __dirname + '/uploads/' + newName,
-  });
-  res.json(newName);
+  try {
+    await imageDownloader.image({
+      url: link,
+      dest: path.join(__dirname, '/uploads/', newName),
+    });
+    res.json(newName);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to download image' });
+  }
 });
 
-const photosMiddleware = multer({ dest: 'uploads/' });
+const photosMiddleware = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
-app.post('/upload', photosMiddleware.array('photos', 100), (req, res) => {
-  const uploadedFiles = [];
-  for (let i = 0; i < req.files.length; i++) {
-    const { path: tempPath, originalname } = req.files[i];
-    const ext = originalname.split('.').pop();
-    const newPath = tempPath + '.' + ext;
-
-    fs.renameSync(tempPath, newPath);
-
-    // ✅ Clean filename (no directory prefix, works on Windows/Linux/macOS)
-    const finalFilename = path.basename(newPath);
-    uploadedFiles.push(finalFilename);
-  }
+app.post('/api/v1/upload', photosMiddleware.array('photos', 100), (req, res) => {
+  const uploadedFiles = req.files.map(file => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const newPath = file.path + ext;
+    fs.renameSync(file.path, newPath);
+    return path.basename(newPath);
+  });
   res.json(uploadedFiles);
 });
 
-// ✅ Create place (protected)
-app.post('/places', verifyToken, async (req, res) => {
-  const {
-    title, address, addedPhotos, description,
-    perks, extraInfo, checkIn, checkOut, maxGuests
-  } = req.body;
-
+app.post('/api/v1/places', verifyToken, async (req, res) => {
+  const { title, address, addedPhotos, description, perks, extraInfo, checkIn, checkOut, maxGuests, price } = req.body;
   try {
     const placeDoc = await Place.create({
       owner: req.user.id,
-      title, address,photos:addedPhotos, description,
-      perks, extraInfo, checkIn, checkOut, maxGuests,
+      title, address, photos: addedPhotos, description,
+      perks, extraInfo, checkIn, checkOut, maxGuests, price
     });
     res.json(placeDoc);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Something went wrong while creating place' });
+    res.status(500).json({ error: 'Error creating place' });
   }
 });
 
-app.get('/places', verifyToken, async (req, res) => {
+app.get('/api/v1/user-places', verifyToken, async (req, res) => {
   try {
     const places = await Place.find({ owner: req.user.id });
     res.json(places);
   } catch (err) {
-    console.error(err);
+    res.status(500).json({ error: 'Error fetching user places' });
+  }
+});
+
+app.get('/api/v1/places/:id', async (req, res) => {
+  try {
+    const place = await Place.findById(req.params.id);
+    if (!place) return res.status(404).json({ error: 'Place not found' });
+    res.json(place);
+  } catch (err) {
+    res.status(400).json({ error: 'Invalid place ID' });
+  }
+});
+
+app.put('/api/v1/places', verifyToken, async (req, res) => {
+  const { id, title, address, addedPhotos, description, perks, extraInfo, checkIn, checkOut, maxGuests, price } = req.body;
+  try {
+    const placeDoc = await Place.findById(id);
+    if (!placeDoc) return res.status(404).json({ error: 'Place not found' });
+    if (placeDoc.owner.toString() !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    placeDoc.set({ title, address, photos: addedPhotos, description, perks, extraInfo, checkIn, checkOut, maxGuests, price });
+    await placeDoc.save();
+    res.json('Place updated successfully');
+  } catch (err) {
+    res.status(500).json({ error: 'Error updating place' });
+  }
+});
+
+app.get('/api/v1/places', async (req, res) => {
+  try {
+    const places = await Place.find();
+    res.json(places);
+  } catch (err) {
     res.status(500).json({ error: 'Error fetching places' });
   }
 });
 
-app.get('/places/:id', async (req, res) => {
-  const { id } = req.params;
+app.post('/api/v1/bookings', verifyToken, async (req, res) => {
   try {
-    const place = await Place.findById(id);
-    if (!place) {
-      return res.status(404).json({ error: 'Place not found' });
-    }
-    res.json(place);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Invalid Place ID' });
-  }
-});
-app.put('/places', verifyToken, async (req, res) => {
-  const {
-    id, title, address, addedPhotos, description,
-    perks, extraInfo, checkIn, checkOut, maxGuests
-  } = req.body;
-
-  try {
-    const placeDoc = await Place.findById(id);
-    if (!placeDoc) return res.status(404).json({ error: 'Place not found' });
-
-    // Check ownership
-    if (placeDoc.owner.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'You are not authorized to update this place.' });
-    }
-
-    // Update fields
-    placeDoc.set({
-      title,
-      address,
-      photos: addedPhotos,
-      description,
-      perks,
-      extraInfo,
-      checkIn,
-      checkOut,
-      maxGuests
+    const { place, checkIn, checkOut, numberOfGuests, name, phone, price } = req.body;
+    const booking = await Booking.create({
+      place, checkIn, checkOut, numberOfGuests, name, phone, price,
+      user: req.user.id,
     });
-
-    await placeDoc.save();
-    res.json('Place updated successfully');
+    res.json(booking);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: 'Failed to create booking', details: err.message });
   }
 });
 
-app.listen(4000, () => {
-  console.log('Server started on port 4000');
+app.get('/api/v1/bookings', verifyToken, async (req, res) => {
+  try {
+    const bookings = await Booking.find({ user: req.user.id }).populate('place');
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: 'Error fetching bookings' });
+  }
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
