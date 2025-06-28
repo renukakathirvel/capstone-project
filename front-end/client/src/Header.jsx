@@ -34,7 +34,7 @@ export default function Header() {
 </svg>
 </div> 
 {!!user && (
-  <div>
+  <div className="ml-1">
     {user.name}
   </div>
 )} 

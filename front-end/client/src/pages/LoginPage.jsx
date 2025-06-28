@@ -12,11 +12,8 @@ export default function LoginPage() {
     ev.preventDefault();
     try {
       const response = await axios.post('/login', {email, password});
-      // Extract token and user from response
       const { token, user } = response.data;
-      // Store token in localStorage
       localStorage.setItem('token', token);
-      // Set user in context
       setUser(user);
       alert('login successful');
       setRedirect(true);

@@ -7,7 +7,7 @@ import { Navigate, useParams } from "react-router-dom";
 
 export default function PlacesFormPage() {
     const {id} = useParams();
-    const [title,setTiltle] = useState('');
+    const [title,setTitle] = useState('');
     const [address,setAddress] = useState('');
     const [addedPhotos,setAddedPhotos] = useState([]);
     const [description,setDescription] = useState('');
@@ -24,12 +24,12 @@ export default function PlacesFormPage() {
        }       
        axios.get('/places/'+id).then(response => {
         const {data} = response;
-        setTiltle(data.title);
+        setTitle(data.title);
         setAddress(data.address);
         setAddedPhotos(data.addedPhotos);
         setDescription(data.description);
         setPerks(data.perks);
-        setExtraInfo(data.extrainfo);
+        setExtraInfo(data.extraInfo);
         setCheckIn(data.checkIn);
         setCheckOut(data.checkOut);
         setMaxGuests(data.maxGuests);
@@ -96,7 +96,7 @@ export default function PlacesFormPage() {
             <AccountNav />
         <form onSubmit={savePlace}>
             {preInput('Title','title for your place, should be short and catchy as in advertisement')}
-            <input type="text" value={title} onChange={ev => setTiltle(ev.target.value) } placeholder="title, for example: My lovely apt" />
+            <input type="text" value={title} onChange={ev => setTitle(ev.target.value) } placeholder="title, for example: My lovely apt" />
             {preInput('Address','address to the place')}
             <input type="text" value={address} onChange={ev => setAddress(ev.target.value)} placeholder="address" />
             {preInput('Photos','more = better')}

@@ -11,7 +11,7 @@ import PlacesPage from './pages/PlacesPage';
 import PlacesFormPage from './pages/PlacesFormPage';
 import PlacePage from './pages/PlacePage';
 import BookingsPage from './pages/BookingsPage';
-import BookingPage from './pages/BookingsPage';
+import BookingPage from './pages/BookingPage';
 
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');

@@ -10,7 +10,6 @@ export function UserContextProvider({children}) {
   useEffect(() => {
     if (!user) {
       const token = localStorage.getItem('token');
-      console.log (token)
       if (token) {
         axios.get('/profile', { 
           headers: {
