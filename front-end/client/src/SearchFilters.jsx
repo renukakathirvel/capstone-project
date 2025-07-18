@@ -12,22 +12,22 @@ export default function SearchFilters({ onChange }) {
 
   function handleCheckboxChange(e) {
     const { name, checked } = e.target;
-    const newFilters = { ...filters, [name]: checked };
-    setFilters(newFilters);
-    onChange(newFilters); // Send to parent
+    const updatedFilters = { ...filters, [name]: checked };
+    setFilters(updatedFilters);
+    onChange(updatedFilters); // Notify parent component
   }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
       {Object.entries(filters).map(([key, value]) => (
-        <label key={key} className="flex gap-1 items-center text-sm">
+        <label key={key} className="flex gap-1 items-center text-sm capitalize">
           <input
             type="checkbox"
             name={key}
             checked={value}
             onChange={handleCheckboxChange}
           />
-          {key.charAt(0).toUpperCase() + key.slice(1)}
+          {key}
         </label>
       ))}
     </div>

@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const mongoose = require("mongoose");
@@ -6,13 +8,15 @@ const jwt = require('jsonwebtoken');
 const User = require('./models/User');
 const Place = require('./models/Place');
 const Booking = require('./models/Booking');
+const Review = require('./models/Review');
+const paymentRoutes = require('./routes/payment');
+const userRoutes = require('./routes/userRoutes');
 const cookieParser = require('cookie-parser');
 const imageDownloader = require('image-downloader');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const helmet = require('helmet');
-require('dotenv').config();
 
 const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
@@ -23,17 +27,17 @@ app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use(helmet());
+app.use('/api/v1', userRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
 }));
 
-// Database Connection
 mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection failed:", err));
 
-// Utility: Get user data from cookie token
 function getUserDataFromReq(req) {
   return new Promise((resolve, reject) => {
     const token = req.cookies.token;
@@ -46,7 +50,6 @@ function getUserDataFromReq(req) {
   });
 }
 
-// Middleware: Verify token from cookie
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -109,6 +112,15 @@ app.get('/api/v1/profile', verifyToken, async (req, res) => {
   res.json({ name, email, _id });
 });
 
+app.get('/user-places', verifyToken, async (req, res) => {
+  const filterPerks = ['wifi', 'parking', 'tv', 'radio', 'pets', 'entrance'];
+  const selectedPerks = filterPerks.filter(perk => req.query[perk] === 'true');
+
+  const filters = selectedPerks.length > 0 ? { perks: { $in: selectedPerks } } : {};
+
+  const places = await Place.find({ owner: req.user.id, ...filters });
+  res.json(places);
+});
 app.post('/api/v1/logout', (req, res) => {
   res.cookie('token', '').json(true);
 });
@@ -218,6 +230,38 @@ app.get('/api/v1/bookings', verifyToken, async (req, res) => {
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ error: 'Error fetching bookings' });
+  }
+});
+
+app.post('/api/v1/reviews', verifyToken, async (req, res) => {
+  try {
+    const { placeId, rating, comment } = req.body;
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    const review = await Review.create({
+      user: req.user.id, 
+      place: placeId,
+      rating,
+      comment
+    });
+
+    res.status(201).json(review);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to create review', details: err.message });
+  }
+
+  console.log("Received review request:", req.body);
+});
+
+app.get('/api/v1/reviews/:placeId', async (req, res) => {
+  try {
+    const reviews = await Review.find({ place: req.params.placeId }).populate('user', 'name');
+    res.json(reviews);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to fetch reviews', details: err.message });
   }
 });
 
