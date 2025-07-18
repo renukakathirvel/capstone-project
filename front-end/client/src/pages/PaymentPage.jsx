@@ -11,11 +11,15 @@ export default function PaymentPage() {
 
   // ✅ Fetch booking details
   useEffect(() => {
-    axios.get('/bookings').then(res => {
-      const found = res.data.find(b => b._id === bookingId);
-      setBooking(found);
+  if (!bookingId) return;
+  axios.get(`/api/v1/bookings/${bookingId}`)
+    .then(res => {
+      setBooking(res.data);
+    })
+    .catch(err => {
+      console.error("❌ Failed to load booking:", err);
     });
-  }, [bookingId]);
+}, [bookingId]);
 
   const makePayment = async () => {
     setLoading(true);
