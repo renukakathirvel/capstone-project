@@ -30,7 +30,7 @@ app.use(helmet());
 app.use('/api/v1', userRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'https://spontaneous-kitten-e9133f.netlify.app/',
   credentials: true,
 }));
 
