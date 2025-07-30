@@ -30,7 +30,7 @@ export default function PlaceGallery({ place }) {
           {place?.photos?.length > 0 &&
             place.photos.map((photo, index) => (
               <div key={index}>
-                <img src={`http://localhost:4000/uploads/${photo}`} alt={`Photo ${index + 1}`} />
+                <img src={`https://airbnb-backend-06yu.onrender.com/uploads/${photo}`} alt={`Photo ${index + 1}`} />
               </div>
             ))}
         </div>
@@ -46,7 +46,7 @@ export default function PlaceGallery({ place }) {
             <img
               onClick={() => setShowAllPhotos(true)}
               className="aspect-square cursor-pointer object-cover"
-              src={`http://localhost:4000/uploads/${place.photos[0]}`}
+              src={`https://airbnb-backend-06yu.onrender.com/uploads/${place.photos[0]}`}
               alt="Main"
             />
           )}
@@ -57,7 +57,7 @@ export default function PlaceGallery({ place }) {
             <img
               onClick={() => setShowAllPhotos(true)}
               className="aspect-square cursor-pointer object-cover"
-              src={`http://localhost:4000/uploads/${place.photos[1]}`}
+              src={`https://airbnb-backend-06yu.onrender.com/uploads/${place.photos[1]}`}
               alt="Second"
             />
           )}
@@ -67,7 +67,7 @@ export default function PlaceGallery({ place }) {
               <img
                 onClick={() => setShowAllPhotos(true)}
                 className="aspect-square cursor-pointer object-cover relative top-2"
-                src={`http://localhost:4000/uploads/${place.photos[2]}`}
+                src={`https://airbnb-backend-06yu.onrender.com/uploads/${place.photos[2]}`}
                 alt="Third"
               />
             </div>

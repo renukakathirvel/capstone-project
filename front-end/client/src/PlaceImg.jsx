@@ -6,7 +6,7 @@ export default function PlaceImg({ place, index = 0, className = 'w-full h-full 
   return (
     <img
       className={className}
-      src={`http://localhost:4000/uploads/${place.photos[index]}`}
+      src={`https://airbnb-backend-06yu.onrender.com/uploads/${place.photos[index]}`}
       alt={`Place photo ${index + 1}`}
     />
   );

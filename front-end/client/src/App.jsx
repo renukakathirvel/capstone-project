@@ -17,7 +17,7 @@ import BookingPage from "./pages/BookingPage";
 import PaymentPage from "./pages/PaymentPage";
 
 // Axios config
-axios.defaults.baseURL = 'http://127.0.0.1:4000/api/v1';
+axios.defaults.baseURL = 'https://airbnb-backend-06yu.onrender.com/api/v1';
 axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use(config => {
