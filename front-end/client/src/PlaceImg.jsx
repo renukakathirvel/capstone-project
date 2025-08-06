@@ -6,7 +6,7 @@ export default function PlaceImg({ place, index = 0, className = 'w-full h-full 
   return (
     <img
       className={className}
-      src={`https://airbnb-backend-06yu.onrender.com/uploads/${place.photos[index]}`}
+      src={`${import.meta.env.VITE_APP_API_URL}/uploads/${place.photos[index]}`}
       alt={`Place photo ${index + 1}`}
     />
   );

@@ -17,7 +17,7 @@ import BookingPage from "./pages/BookingPage";
 import PaymentPage from "./pages/PaymentPage";
 
 // Axios config
-axios.defaults.baseURL = 'https://airbnb-backend-06yu.onrender.com/api/v1';
+axios.defaults.baseURL = `${import.meta.env.VITE_APP_API_URL}/api/v1`;
 axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use(config => {
