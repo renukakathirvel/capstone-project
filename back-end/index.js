@@ -233,6 +233,7 @@ app.get('/api/v1/bookings', verifyToken, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch bookings' });
   }
+  });
 
 app.get('/api/v1/bookings/:id', verifyToken, async (req, res) => {
   try {
