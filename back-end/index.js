@@ -22,6 +22,10 @@ const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = process.env.JWT_SECRET || 'default_secret';
 
+app.use(cors({
+  origin: 'https://dev-renuka-bnb.netlify.app',
+  credentials: true,
+}));
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -29,10 +33,7 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 app.use(helmet());
 app.use('/api/v1', userRoutes);
 app.use('/api/v1/payments', paymentRoutes);
-app.use(cors({
-  origin: 'https://dev-renuka-bnb.netlify.app',
-  credentials: true,
-}));
+
 
 mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log("MongoDB connected"))
@@ -223,6 +224,15 @@ app.post('/api/v1/bookings', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to create booking', details: err.message });
   }
 });
+
+app.get('/api/v1/bookings', verifyToken, async (req, res) => {
+  try {
+    const bookings = await Booking.find({ user: req.user.id }).populate('place');
+    res.json(bookings);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch bookings' });
+  }
 
 app.get('/api/v1/bookings/:id', verifyToken, async (req, res) => {
   try {

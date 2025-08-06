@@ -13,7 +13,7 @@ export default function ProfilePage() {
 
   const handleSaveAbout = async () => {
   try {
-    const { data } = await axios.put('/api/v1/users/about', { aboutMe });
+    const { data } = await axios.put('/about', { aboutMe });
     setUser(data); // Update user context
     setEditMode(false);
   } catch (err) {
